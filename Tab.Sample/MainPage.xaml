@@ -9,7 +9,7 @@
     mc:Ignorable="d">
 
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
-        <tab:TabControl TitlePath="Title" x:Name="TabControl">
+        <tab:TabControl TitlePath="Title" x:Name="TabControl" AddRequest="TabControl_OnAddRequest">
             <tab:TabControl.ItemsTemplate>
                 <DataTemplate>
                     <Grid>

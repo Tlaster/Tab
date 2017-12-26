@@ -108,7 +108,6 @@
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TabControl.cs" />
-    <Compile Include="TabTitle.cs" />
     <Compile Include="VisualTree.cs" />
     <EmbeddedResource Include="Properties\Tab.rd.xml" />
   </ItemGroup>

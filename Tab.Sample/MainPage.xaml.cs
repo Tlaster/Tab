@@ -23,12 +23,14 @@ namespace Tab.Sample
     /// </summary>
     public sealed partial class MainPage : Page
     {
+        private ObservableCollection<SampleViewModel> _items;
+
         public MainPage()
         {
             this.InitializeComponent();
             this.Loaded += MainPage_Loaded;
             var random = new Random();
-            TabControl.ItemsSource = new ObservableCollection<SampleViewModel>(new[]
+            _items = new ObservableCollection<SampleViewModel>(new[]
             {
                 new SampleViewModel(random.Next().ToString(), random.Next().ToString()),
                 new SampleViewModel(random.Next().ToString(), random.Next().ToString()),
@@ -36,11 +38,17 @@ namespace Tab.Sample
                 new SampleViewModel(random.Next().ToString(), random.Next().ToString()),
                 new SampleViewModel(random.Next().ToString(), random.Next().ToString()),
             });
+            TabControl.ItemsSource = _items;
         }
 
         private void MainPage_Loaded(object sender, RoutedEventArgs e)
         {
 
+        }
+
+        private void TabControl_OnAddRequest(object sender, EventArgs e)
+        {
+            _items.Add(new SampleViewModel("aaa", "bbbb"));
         }
     }
 

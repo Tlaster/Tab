@@ -3,10 +3,13 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using Windows.Devices.Input;
+using Windows.UI.Input;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
 using Windows.UI.Xaml.Data;
+using Windows.UI.Xaml.Input;
 
 // The Templated Control item template is documented at https://go.microsoft.com/fwlink/?LinkId=234235
 
@@ -32,12 +35,12 @@ namespace Tab
         private ContentControl _rootContainer;
         private ListView _tabList;
 
-        public string TitlePath { get; set; }
-
         public TabControl()
         {
             DefaultStyleKey = typeof(TabControl);
         }
+
+        public string TitlePath { get; set; }
 
         public IEnumerable ItemsSource
         {
@@ -67,10 +70,7 @@ namespace Tab
 
         private void OnSelectedItemChanged(object newValue)
         {
-            if (_rootContainer != null)
-            {
-                _rootContainer.Content = newValue != null ? _items[newValue] : null;
-            }
+            if (_rootContainer != null) _rootContainer.Content = newValue != null ? _items[newValue] : null;
         }
 
         private static void OnItemsSourceChanged(DependencyObject dependencyObject,
@@ -172,12 +172,6 @@ namespace Tab
             });
             _tabList.ChoosingItemContainer += TabList_ChoosingItemContainer;
             _rootContainer = GetTemplateChild("RootContainer") as ContentControl;
-            //_rootContainer.SetBinding(ContentControl.ContentProperty, new Binding
-            //{
-            //    Source = this,
-            //    Path = new PropertyPath("SelectedItem.Value"),
-            //    Mode = BindingMode.OneWay
-            //});
             _addButton = GetTemplateChild("AddButton") as Button;
             _addButton.Click += AddButton_Click;
             SelectedItem = _items.LastOrDefault().Key;
@@ -186,57 +180,65 @@ namespace Tab
 
         private void TabList_ChoosingItemContainer(ListViewBase sender, ChoosingItemContainerEventArgs args)
         {
-            //if (args.ItemContainer != null)
-            //{
-            //    return;
-            //}
-            if (args.ItemContainer != null)
-            {
-                return;
-            }
-            var container = args.ItemContainer ?? new TabTitle();
-
-            void ButtonClick(object s, RoutedEventArgs e)
-            {
-                (s as Button).Click -= ButtonClick;
-                var shouldChangeSelectedItem = _items.LastOrDefault().Key == args.Item;
-                (ItemsSource as IList)?.Remove(args.Item);
-                if (shouldChangeSelectedItem)
-                {
-                    SelectedItem = _items.LastOrDefault().Key;
-                }
-            }
-
-            void ContainerItemLoaded(object s, RoutedEventArgs e)
-            {
-                container.Loaded -= ContainerItemLoaded;
-                var text = container.FindDescendant<TextBlock>();
-                if (string.IsNullOrEmpty(TitlePath))
-                {
-                    text?.SetBinding(TextBlock.TextProperty, new Binding
-                    {
-                        Source = args.Item,
-                        Mode = BindingMode.OneWay,
-                    });
-                }
-                else
-                {
-                    text?.SetBinding(TextBlock.TextProperty, new Binding
-                    {
-                        Source = args.Item,
-                        Path = new PropertyPath(TitlePath),
-                        Mode = BindingMode.OneWay,
-                    });
-                }
-                var button = container.FindDescendant<Button>();
-                button.Click += ButtonClick;
-
-            }
+            var container = args.ItemContainer ?? new ListViewItem();
+            container.DataContext = args.Item;
             container.Loaded += ContainerItemLoaded;
             args.ItemContainer = container;
         }
 
+        private void ContainerItemLoaded(object s, RoutedEventArgs e)
+        {
+            var container = s as ContentControl;
+            var item = container.Content;
+            container.Loaded -= ContainerItemLoaded;
+            var text = container.FindDescendant<TextBlock>();
+            if (string.IsNullOrEmpty(TitlePath))
+                text?.SetBinding(TextBlock.TextProperty, new Binding
+                {
+                    Source = item,
+                    Mode = BindingMode.OneWay
+                });
+            else
+                text?.SetBinding(TextBlock.TextProperty, new Binding
+                {
+                    Source = item,
+                    Path = new PropertyPath(TitlePath),
+                    Mode = BindingMode.OneWay
+                });
+            var button = container.FindDescendant<Button>();
+            button.Click += ButtonClick;
+            container.PointerReleased += Container_PointerReleased;
+        }
 
+        private void Container_PointerReleased(object sender, PointerRoutedEventArgs e)
+        {
+            var ptr = e.Pointer;
+            if (ptr.PointerDeviceType == PointerDeviceType.Mouse)
+            {
+                var ptrPt = e.GetCurrentPoint(sender as ListViewItem);
+                if (ptrPt.Properties.PointerUpdateKind == PointerUpdateKind.MiddleButtonReleased)
+                {
+                    CloseTab((sender as ListViewItem).Content);
+                    (sender as ListViewItem).PointerReleased -= Container_PointerReleased;
+                    e.Handled = true;
+                }
+            }
+        }
+
+        private void ButtonClick(object sender, RoutedEventArgs e)
+        {
+            (sender as Button).Click -= ButtonClick;
+            var item = (sender as Button).DataContext;
+            CloseTab(item);
+        }
+
+        private void CloseTab(object item)
+        {
+            var shouldChangeSelectedItem = _items.LastOrDefault().Key == item || SelectedItem == item;
+            (ItemsSource as IList)?.Remove(item);
+            if (shouldChangeSelectedItem) SelectedItem = _items.LastOrDefault().Key;
+        }
+        
         private void AddButton_Click(object sender, RoutedEventArgs e)
         {
             AddRequest?.Invoke(this, EventArgs.Empty);
