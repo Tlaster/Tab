@@ -48,7 +48,8 @@ namespace Tab.Sample
 
         private void TabControl_OnAddRequest(object sender, EventArgs e)
         {
-            _items.Add(new SampleViewModel("aaa", "bbbb"));
+            var random = new Random();
+            _items.Add(new SampleViewModel(random.Next().ToString(), random.Next().ToString()));
         }
     }
 
@@ -62,5 +63,9 @@ namespace Tab.Sample
 
         public string Title { get; }
         public string Text { get; }
+        public override string ToString()
+        {
+            return $"{Title} : {Text}";
+        }
     }
 }

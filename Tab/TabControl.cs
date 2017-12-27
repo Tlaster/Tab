@@ -98,7 +98,6 @@ namespace Tab
         {
             var content = ItemsTemplate.LoadContent();
             if (content is FrameworkElement frameworkElement) frameworkElement.DataContext = item;
-
             _items.Add(item, content);
         }
 
@@ -110,7 +109,7 @@ namespace Tab
                     if (e.NewItems != null && e.NewItems.Count > 0)
                     {
                         foreach (var item in e.NewItems) AddContent(item);
-                        SelectedItem = _items.LastOrDefault().Key;
+                        SelectedItem = ItemsSource.Cast<object>().LastOrDefault();
                     }
 
                     break;
@@ -119,8 +118,16 @@ namespace Tab
                 case NotifyCollectionChangedAction.Remove:
                     if (e.OldItems != null && e.OldItems.Count > 0)
                     {
-                        foreach (var item in e.OldItems) _items.Remove(item);
-                        SelectedItem = _items.LastOrDefault().Key;
+                        var shouldChangeSelectedItem = false;
+                        foreach (var item in e.OldItems)
+                        {
+                            shouldChangeSelectedItem = SelectedItem == item ||
+                                                       SelectedItem == item &&
+                                                       ItemsSource.Cast<object>().LastOrDefault() == item;
+                            _items.Remove(item);
+                        }
+
+                        if (shouldChangeSelectedItem) SelectedItem = ItemsSource.Cast<object>().LastOrDefault();
                     }
 
                     break;
@@ -131,12 +138,11 @@ namespace Tab
                     if (e.NewItems != null && e.NewItems.Count > 0)
                     {
                         foreach (var item in e.NewItems) AddContent(item);
-
                         SelectedItem = e.NewItems[0];
                     }
                     else
                     {
-                        SelectedItem = _items.LastOrDefault().Key;
+                        SelectedItem = SelectedItem = ItemsSource.Cast<object>().LastOrDefault();
                     }
 
                     break;
@@ -145,7 +151,7 @@ namespace Tab
                     if (sender is IEnumerable enumerable)
                     {
                         foreach (var item in enumerable) AddContent(item);
-                        SelectedItem = _items.LastOrDefault().Key;
+                        SelectedItem = SelectedItem = ItemsSource.Cast<object>().LastOrDefault();
                     }
 
                     break;
@@ -170,6 +176,7 @@ namespace Tab
                 Path = new PropertyPath(nameof(ItemsSource)),
                 Mode = BindingMode.OneWay
             });
+            _tabList.ContainerContentChanging += TabList_ContainerContentChanging;
             _tabList.ChoosingItemContainer += TabList_ChoosingItemContainer;
             _rootContainer = GetTemplateChild("RootContainer") as ContentControl;
             _addButton = GetTemplateChild("AddButton") as Button;
@@ -178,19 +185,16 @@ namespace Tab
             OnSelectedItemChanged(SelectedItem);
         }
 
-        private void TabList_ChoosingItemContainer(ListViewBase sender, ChoosingItemContainerEventArgs args)
+        private void TabList_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
         {
-            var container = args.ItemContainer ?? new ListViewItem();
-            container.DataContext = args.Item;
-            container.Loaded += ContainerItemLoaded;
-            args.ItemContainer = container;
+            if (args.InRecycleQueue) return;
+            var container = args.ItemContainer as ContentControl;
+            var item = container.Content;
+            UpdateContainer(container, item);
         }
 
-        private void ContainerItemLoaded(object s, RoutedEventArgs e)
+        private void UpdateContainer(ContentControl container, object item)
         {
-            var container = s as ContentControl;
-            var item = container.Content;
-            container.Loaded -= ContainerItemLoaded;
             var text = container.FindDescendant<TextBlock>();
             if (string.IsNullOrEmpty(TitlePath))
                 text?.SetBinding(TextBlock.TextProperty, new Binding
@@ -205,9 +209,25 @@ namespace Tab
                     Path = new PropertyPath(TitlePath),
                     Mode = BindingMode.OneWay
                 });
+        }
+
+        private void TabList_ChoosingItemContainer(ListViewBase sender, ChoosingItemContainerEventArgs args)
+        {
+            var container = args.ItemContainer ?? new ListViewItem();
+            container.DataContext = args.Item;
+            container.Loaded += ContainerItemLoaded;
+            container.PointerReleased += Container_PointerReleased;
+            args.ItemContainer = container;
+        }
+
+        private void ContainerItemLoaded(object sender, RoutedEventArgs e)
+        {
+            var container = sender as ContentControl;
+            container.Loaded -= ContainerItemLoaded;
+            var item = container.Content;
+            UpdateContainer(container, item);
             var button = container.FindDescendant<Button>();
             button.Click += ButtonClick;
-            container.PointerReleased += Container_PointerReleased;
         }
 
         private void Container_PointerReleased(object sender, PointerRoutedEventArgs e)
@@ -234,11 +254,9 @@ namespace Tab
 
         private void CloseTab(object item)
         {
-            var shouldChangeSelectedItem = _items.LastOrDefault().Key == item || SelectedItem == item;
             (ItemsSource as IList)?.Remove(item);
-            if (shouldChangeSelectedItem) SelectedItem = _items.LastOrDefault().Key;
         }
-        
+
         private void AddButton_Click(object sender, RoutedEventArgs e)
         {
             AddRequest?.Invoke(this, EventArgs.Empty);
