@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Windows.Input;
 using Windows.Devices.Input;
 using Windows.UI.Input;
 using Windows.UI.Xaml;
@@ -34,6 +35,8 @@ namespace Tab
         private Button _addButton;
         private ContentControl _rootContainer;
         private ListView _tabList;
+
+        public ICommand AddCommand { get; set; }
 
         public TabControl()
         {
@@ -260,6 +263,10 @@ namespace Tab
         private void AddButton_Click(object sender, RoutedEventArgs e)
         {
             AddRequest?.Invoke(this, EventArgs.Empty);
+            if (AddCommand != null && AddCommand.CanExecute(null))
+            {
+                AddCommand.Execute(null);
+            }
         }
     }
 }

@@ -12,7 +12,7 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
-                        <ContentControl x:Name="RootContainer" Grid.Row="1" />
+                        <ContentControl HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" x:Name="RootContainer" Grid.Row="1" />
                         <Grid Grid.Row="0">
                             <ListView ScrollViewer.HorizontalScrollBarVisibility="Hidden"
                                       ScrollViewer.HorizontalScrollMode="Enabled" CanReorderItems="True"

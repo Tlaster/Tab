@@ -12,9 +12,17 @@
         <tab:TabControl TitlePath="Title" x:Name="TabControl" AddRequest="TabControl_OnAddRequest">
             <tab:TabControl.ItemsTemplate>
                 <DataTemplate>
-                    <Grid>
-                        <TextBlock Text="{Binding Text}"/>
-                    </Grid>
+                    <Frame SourcePageType="local:BlankPage1">
+                        <Frame.ContentTransitions>
+                            <TransitionCollection>
+                                <NavigationThemeTransition>
+                                    <NavigationThemeTransition.DefaultNavigationTransitionInfo>
+                                        <DrillInNavigationTransitionInfo/>
+                                    </NavigationThemeTransition.DefaultNavigationTransitionInfo>
+                                </NavigationThemeTransition>
+                            </TransitionCollection>
+                        </Frame.ContentTransitions>
+                    </Frame>
                 </DataTemplate>
             </tab:TabControl.ItemsTemplate>
         </tab:TabControl>
